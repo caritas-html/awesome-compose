@@ -1,0 +1,67 @@
+name: reactnative-express-postgres
+
+services:
+  frontend:
+    build:
+      context: frontend
+      target: development
+    networks:
+      - client-side
+    ports:
+      - 8081:8081
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  backend:
+    build:
+      context: backend
+      target: development
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:mysecretpassword@db:5432/mydatabase
+    networks:
+      - client-side
+      - server-side
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - db  
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRES_DB=mydatabase
+    networks:
+      - server-side
+    ports:
+      - 5432:5432
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/log:/var/log/nginx
+      - ./nginx/certificates:/etc/nginx/certificates
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - client-side
+      - server-side
+    depends_on:
+      - backend
+      - frontend
+
+networks:
+  client-side: {}
+  server-side: {}
+
+volumes:
+  db-data: {}
